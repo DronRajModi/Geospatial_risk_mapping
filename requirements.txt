@@ -6,5 +6,6 @@ matplotlib
 catboost
 xgboost
 Flask
+geopandas
 
 -e .
