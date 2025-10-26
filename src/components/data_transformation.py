@@ -185,3 +185,11 @@ def initiate_data_transformation(train_input, test_input, artifacts_dir="artifac
 
     except Exception as e:
         raise CustomException(e, sys)
+
+
+class DataTransformation:
+    def __init__(self):
+        pass
+
+    def initiate_data_transformation(self, train_input, test_input, artifacts_dir="artifacts"):
+        return initiate_data_transformation(train_input, test_input, artifacts_dir)

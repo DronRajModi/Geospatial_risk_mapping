@@ -178,3 +178,12 @@ def initiate_model_training(train_arr, test_arr, artifacts_dir="artifacts", use_
 
     except Exception as e:
         raise CustomException(e, sys)
+
+
+class ModelTrainer:
+    def __init__(self):
+        pass
+
+    def initiate_model_training(self,train_arr, test_arr, artifacts_dir="artifacts", use_gridsearch=False):
+        return initiate_model_training(train_arr, test_arr, artifacts_dir="artifacts", use_gridsearch=False)
+
