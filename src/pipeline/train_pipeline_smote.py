@@ -1,5 +1,6 @@
 # src/pipeline/train_pipeline_smote.py
-
+print("SMOTE-NC PIPELINE IS RUNNING. THIS IS THE NEW CODE.")
+print("SMOTE-NC TRANSFORMATION FILE IS LOADING. THIS IS THE NEW CODE.")
 import os
 import sys
 from src.exception import CustomException

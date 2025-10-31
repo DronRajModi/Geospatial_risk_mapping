@@ -10,4 +10,8 @@ geopandas
 dill
 tensorflow
 imbalanced-learn
+networkx
+torch
+torch_geometric
+libpysal
 -e .
