@@ -1,9 +1,42 @@
 import React from "react";
 
-export default function Header() {
+// Receives the current mode and the function to set it
+export default function Header({ mode, setMode }) {
+  
+  // Helper function for button styles
+  const getButtonClasses = (buttonMode) => {
+    const baseClasses = "py-2 px-4 rounded-lg font-medium transition-all duration-150";
+    if (mode === buttonMode) {
+      // Active state
+      return `${baseClasses} bg-blue-600 text-white shadow-md`;
+    } else {
+      // Inactive state
+      return `${baseClasses} bg-gray-200 text-gray-700 hover:bg-gray-300`;
+    }
+  };
+
   return (
-    <header className="bg-blue-700 text-white p-4 text-center font-semibold text-xl shadow">
-      Geospatial Risk Mapping of NCDs
+    <header className="bg-white text-gray-800 p-4 shadow-sm border-b border-gray-200 flex justify-between items-center">
+      {/* Title */}
+      <h1 className="font-semibold text-xl text-gray-700">
+        Geospatial Risk Mapping of NCDs
+      </h1>
+
+      {/* Mode Toggle Buttons */}
+      <div className="flex space-x-2">
+        <button
+          onClick={() => setMode('heatmap')}
+          className={getButtonClasses('heatmap')}
+        >
+          Population Risk
+        </button>
+        <button
+          onClick={() => setMode('personal')}
+          className={getButtonClasses('personal')}
+        >
+          Personal Risk
+        </button>
+      </div>
     </header>
   );
 }
