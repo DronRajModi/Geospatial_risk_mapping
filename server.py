@@ -5,7 +5,17 @@ import numpy as np
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import warnings
-import traceback 
+import traceback
+import sys 
+
+# --- NEW IMPORTS (Add these at the top of server.py) ---
+try:
+    from src.pipeline.predict_pipeline import PredictPipeline, CustomData
+    from src.exception import CustomException
+except ImportError as ie:
+    print(f"ERROR: Failed to import pipeline modules. Make sure 'src' is in your PYTHONPATH. {ie}")
+    sys.exit(1)
+# --- END NEW IMPORTS ---
 
 # --- 1. SETUP FLASK APP ---
 app = Flask(__name__)
@@ -44,14 +54,14 @@ try:
         for sex in sexes:
             SYNTHETIC_POPULATION_TEMPLATE.append({"Age": age, "Sex": sex})
     
-    print(f"✅ Server is ready. Loaded {len(df_district_templates)} district templates.")
-    print(f"✅ Synthetic population size: {len(SYNTHETIC_POPULATION_TEMPLATE)}")
+    print(f" Server is ready. Loaded {len(df_district_templates)} district templates.")
+    print(f" Synthetic population size: {len(SYNTHETIC_POPULATION_TEMPLATE)}")
 
 except FileNotFoundError as e:
-    print(f"❌ ERROR: Missing artifact file. Server cannot start. {e}")
+    print(f" ERROR: Missing artifact file. Server cannot start. {e}")
     model = None
 except Exception as e:
-    print(f"❌ ERROR loading artifacts: {e}")
+    print(f" ERROR loading artifacts: {e}")
     traceback.print_exc()
     model = None
 
@@ -142,45 +152,92 @@ def get_risk_heatmap():
 # --- 4. YOUR ORIGINAL PREDICT ENDPOINT (for personal risk) ---
 @app.route("/predict", methods=["POST"])
 def predict():
-    if model is None:
-        return jsonify({"error": "Model is not loaded"}), 500
     try:
+        # 1. Instantiate the pipeline
+        # This will load all artifacts needed for this route.
+        pipeline = PredictPipeline()
+        
+        # 2. Get data from frontend and create CustomData object
         data = request.json
-        district = data.get("district").strip().title()
+        
+        # We must cast numerical values correctly from the JSON
+        custom_data = CustomData(
+            District=data.get('District'),
+            Age=int(data.get('Age')),
+            Gender=data.get('Gender'),
+            Tobacco_Use=data.get('Tobacco_Use'),
+            Alcohol_Use=data.get('Alcohol_Use'),
+            Hypertension=data.get('Hypertension'),
+            Diabetes=data.get('Diabetes'),
+            Obese=float(data.get('Obese')),
+            Cholesterol=float(data.get('Cholesterol')),
+            Sleep_Hours=float(data.get('Sleep_Hours')),
+            Urban_or_Rural=data.get('Urban_or_Rural')
+        )
+        
+        print(f"Received personal risk prediction request for: {custom_data.District}")
+        
+        # 3. Run all pipeline functions
+        # 3a. Main prediction
+        prediction, confidence, pred_probs = pipeline.predict(custom_data)
+        
+        # 3b. Age risk profile
+        age_labels, age_scores = pipeline.get_age_risk_profile(custom_data, prediction)
+        
+        # 3c. GNN Neighbors (for the "Analyze Neighbors" button)
+        neighbors = pipeline.get_signature_neighbors(custom_data.District)
+        
+        # 3d. Feature importances
+        importances = pipeline.get_feature_importances()
+        
+        # 3e. Lifestyle "what-if"
+        lifestyle_what_if = pipeline.get_lifestyle_what_if(custom_data, pred_probs)
 
-        # --- FIX: Use df_district_templates ---
-        if district not in df_district_templates.index:
-            return jsonify({"error": f"District '{district}' not found in template data."}), 404
-        
-        features_row = df_district_templates.loc[[district]].copy()
-        # --- END OF FIX ---
-        
-        if "age" in data and data["age"] and "Age" in features_row.columns:
-            features_row["Age"] = pd.to_numeric(data["age"])
-        if "sex" in data and data["sex"] and "Sex" in features_row.columns:
-            features_row["Sex"] = data["sex"] 
-        if district not in df_gnn.index:
-            return jsonify({"error": f"District '{district}' not found in GNN data."}), 404
-        
-        gnn_features = df_gnn.loc[[district]]
-        
-        # --- FIX: Merge on index ---
-        final_features = pd.merge(features_row, gnn_features, left_index=True, right_index=True)
-        # --- END OF FIX ---
-
-        final_input_df = final_features[EXPECTED_COLUMNS]
-        processed_data = preprocessor.transform(final_input_df)
-        scaled_data = scaler.transform(processed_data)
-        prediction_encoded = model.predict(scaled_data)
-        prediction_class = label_encoder.inverse_transform(prediction_encoded)[0]
+        # 4. Bundle everything into one JSON response for the frontend
         return jsonify({
-            "predicted_class": prediction_class,
-            "district": district
+            "success": True,
+            "main_prediction": {
+                "disease": prediction,
+                "confidence": confidence
+            },
+            "age_risk_profile": {
+                "labels": age_labels,
+                "scores": age_scores
+            },
+            "spatial_neighbors": neighbors,
+            "top_risk_factors": importances,
+            "lifestyle_tips": lifestyle_what_if
         })
+        
+    except CustomException as e:
+        # Handle exceptions from your pipeline
+        print(f"Prediction Error (Custom): {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
     except Exception as e:
-        print(f"Prediction Error: {e}")
-        return jsonify({"error": str(e)}), 500
+        # Handle general errors (e.g., missing key from JSON, type conversion error)
+        print(f"Prediction Error (General): {e}")
+        traceback.print_exc()
+        return jsonify({"success": False, "error": f"Server Error: {e}"}), 500
 
+@app.route("/get_neighbors", methods=["GET"])
+def get_neighbors():
+    district_name = request.args.get("district")
+    if not district_name:
+        return jsonify({"error": "No district specified"}), 400
+    
+    try:
+        # Instantiate pipeline just to get access to the GNN data
+        pipeline = PredictPipeline() 
+        neighbors = pipeline.get_signature_neighbors(district_name)
+        return jsonify({"success": True, "neighbors": neighbors})
+
+    except CustomException as e:
+        print(f"Neighbor Error (Custom): {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+    except Exception as e:
+        print(f"Neighbor Error (General): {e}")
+        traceback.print_exc()
+        return jsonify({"success": False, "error": f"Server Error: {e}"}), 500
 
 # --- 5. RUN THE SERVER ---
 if __name__ == "__main__":
