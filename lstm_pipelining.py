@@ -1,5 +1,4 @@
 # run_smote_pipeline.py
-# (FINAL VERSION with Smarter Augmentation Strategy)
 
 import os
 import sys

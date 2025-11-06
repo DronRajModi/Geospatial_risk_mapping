@@ -1,5 +1,4 @@
 # run_smote_pipeline.py
-# (FINAL VERSION with fix to save final preprocessor/scaler)
 
 import os
 import sys
@@ -11,7 +10,7 @@ import logging
 from datetime import datetime
 from sklearn.model_selection import train_test_split
 
-# --- 1. SETUP LOGGER ---   
+#  SETUP LOGGER   
 LOG_FILE = f"{datetime.now().strftime('%Y_%m_%d_%H_%M_%S')}.log"
 logs_path = os.path.join(os.getcwd(), "logs")
 os.makedirs(logs_path, exist_ok=True)
@@ -26,7 +25,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger("SMOTEPipelineLogger")
 
-# --- 2. DEFINE EXCEPTION ---
+#  DEFINE EXCEPTION 
 class CustomException(Exception):
     def __init__(self, error_message, error_detail: sys):
         super().__init__(error_message)
@@ -35,7 +34,7 @@ class CustomException(Exception):
         self.error_message = f"Error in {file_name} at line {exc_tb.tb_lineno}: {error_message}"
     def __str__(self): return self.error_message
 
-# --- 3. HELPER FUNCTIONS (for Transformation) ---
+# HELPER FUNCTIONS 
 def _load_df(maybe_df_or_path):
     if isinstance(maybe_df_or_path, pd.DataFrame):
         return maybe_df_or_path.copy()
@@ -54,7 +53,7 @@ def _get_target_column(df: pd.DataFrame):
     logger.warning("Standard target column name not found, falling back to the last column.")
     return df.columns[-1]
 
-# --- 4. COMPONENT 1: SPATIAL IMPUTATION ---
+# SPATIAL IMPUTATION 
 from sklearn.impute import KNNImputer
 from dataclasses import dataclass
 
@@ -104,7 +103,6 @@ class SpatialImputer:
         except Exception as e:
             raise CustomException(e, sys)
 
-# --- 5. COMPONENT 2: TRANSFORMATION + SMOTE-NC ---
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import StandardScaler, OneHotEncoder, LabelEncoder
 from sklearn.compose import ColumnTransformer
@@ -202,7 +200,7 @@ def initiate_data_transformation_smote(train_input, test_input, artifacts_dir="a
     except Exception as e:
         raise CustomException(e, sys)
 
-# --- 6. COMPONENT 3: MODEL TRAINER (RandomForest) ---
+# MODEL TRAINER (RandomForest)
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, f1_score, classification_report
 
@@ -239,7 +237,6 @@ def initiate_model_training(train_arr, test_arr, artifacts_dir="artifacts", mode
     except Exception as e:
         raise CustomException(e, sys)
 
-# --- 7. COMPONENT 4: GRAPH FEATURES (Stage C) ---
 import networkx as nx
 import torch
 import torch.nn.functional as F
@@ -356,7 +353,6 @@ class GraphFeatureGenerator:
         except Exception as e:
             raise CustomException(e, sys)
 
-# --- 8. NEW: COMPONENT 5: Spatially-Aware RandomForest (NEW Stage D) ---
 def initiate_final_rf_training(
     X_train_df, y_train_series, # Original training data
     X_test_df, y_test_series,   # Original test data
@@ -393,7 +389,7 @@ def initiate_final_rf_training(
         
         logger.info(f"New training feature shape (with GNN): {X_train_spatial.shape}")
         
-        # 3. Apply SMOTE-NC (Stage B)
+        # 3. Apply SMOTE-NC 
         logger.info("Applying SMOTE-NC to the new spatio-temporal features...")
         
         preprocessor_gnn, _, _, categorical_features_indices_gnn = build_preprocessing_pipeline(X_train_spatial, include_gnn=True)
@@ -439,13 +435,11 @@ def initiate_final_rf_training(
         final_train_arr = np.hstack([X_train_scaled, y_train_encoded.reshape(-1, 1)])
         final_test_arr = np.hstack([X_test_scaled, y_test_encoded.reshape(-1, 1)])
         
-        # --- !! FIX: SAVE THE FINAL PROCESSORS !! ---
         final_preprocessor_path = os.path.join(artifacts_dir, "final_preprocessor.pkl")
         final_scaler_path = os.path.join(artifacts_dir, "final_scaler.pkl")
         with open(final_preprocessor_path, "wb") as f: pickle.dump(preprocessor_gnn, f)
         with open(final_scaler_path, "wb") as f: pickle.dump(scaler, f)
         logger.info(f"Final preprocessor and scaler saved for prediction.")
-        # --- END OF FIX ---
 
         final_model_results = initiate_model_training(
             final_train_arr,
@@ -482,7 +476,7 @@ if __name__ == "__main__":
         )
         logger.info(f"Stage A complete. Full imputed feature set at {imputed_features_path}")
         
-        # --- STEP 3: Data Transformation & Augmentation (Stage B with SMOTE-NC) ---
+        # --- STEP 3: Data Transformation & Augmentation  ---
         logger.info("STEP 3: Running Data Transformation (with SMOTE-NC augmentation)")
         (
             train_arr_scaled_aug, test_arr_scaled, 
@@ -495,7 +489,7 @@ if __name__ == "__main__":
         )
         logger.info("Data Transformation and Augmentation complete.")
         
-        # --- STEP 4: Graph Feature Generation (Stage C) ---
+        # --- STEP 4: Graph Feature Generation ---
         logger.info("STEP 4: Running Graph Feature Generation (Stage C)")
         gnn_obj = GraphFeatureGenerator(embedding_dim=64, epochs=50) 
         gnn_embedding_path = gnn_obj.initiate_graph_feature_generation(
@@ -513,7 +507,7 @@ if __name__ == "__main__":
         )
         logger.info(f"Baseline Model Trainer complete. Accuracy: {model_trainer_obj['accuracy']:.4f}")
         
-        # --- STEP 6: Final Model Trainer (Stage D - Spatially-Aware RF) ---
+        # --- STEP 6: Final Model Trainer  ---
         logger.info("STEP 6: Running Final Spatially-Aware RandomForest Model (Stage D)")
         final_model_results = initiate_final_rf_training(
             X_train_df=X_train_df, y_train_series=y_train_series,

@@ -1,16 +1,16 @@
 import React from "react";
 
-// Receives the current mode and the function to set it
+
 export default function Header({ mode, setMode }) {
   
-  // Helper function for button styles
+
   const getButtonClasses = (buttonMode) => {
     const baseClasses = "py-2 px-4 rounded-lg font-medium transition-all duration-150";
     if (mode === buttonMode) {
-      // Active state
+      
       return `${baseClasses} bg-blue-600 text-white shadow-md`;
     } else {
-      // Inactive state
+      
       return `${baseClasses} bg-gray-200 text-gray-700 hover:bg-gray-300`;
     }
   };

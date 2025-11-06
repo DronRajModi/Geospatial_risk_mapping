@@ -8,21 +8,19 @@ import warnings
 import traceback
 import sys 
 
-# --- NEW IMPORTS (Add these at the top of server.py) ---
+
 try:
     from src.pipeline.predict_pipeline import PredictPipeline, CustomData
     from src.exception import CustomException
 except ImportError as ie:
     print(f"ERROR: Failed to import pipeline modules. Make sure 'src' is in your PYTHONPATH. {ie}")
     sys.exit(1)
-# --- END NEW IMPORTS ---
 
-# --- 1. SETUP FLASK APP ---
 app = Flask(__name__)
 CORS(app) 
 warnings.filterwarnings('ignore', category=UserWarning, module='sklearn')
 
-# --- 2. LOAD ALL ARTIFACTS ---
+#  2. LOAD ALL ARTIFACTS
 try:
     artifacts_dir = "artifacts"
     model = joblib.load(os.path.join(artifacts_dir, "model_final_spatial_rf.pkl"))
@@ -34,14 +32,11 @@ try:
     df_gnn['District'] = df_gnn['District'].str.strip().str.title()
     df_gnn = df_gnn.set_index('District')
     
-    # --- THIS IS THE FIX ---
-    # Load 'data.csv' which has ALL columns (categorical and numerical)
-    # 'imputed_features.csv' was the wrong file.
+  
     df_base_data = pd.read_csv(os.path.join(artifacts_dir, "data.csv"))
     df_base_data['District'] = df_base_data['District'].str.strip().str.title()
-    # Get the *first* row for each district to use as a template
     df_district_templates = df_base_data.drop_duplicates(subset=['District']).set_index('District')
-    # --- END OF FIX ---
+   
 
     feature_sets = [cols for name, trans, cols in preprocessor.transformers_]
     EXPECTED_COLUMNS = [col for subset in feature_sets for col in subset]
@@ -66,7 +61,7 @@ except Exception as e:
     model = None
 
 
-# --- 3. GOING BACK TO THE WORKING HEATMAP ENDPOINT ---
+#  HEATMAP ENDPOINT 
 @app.route("/get_risk_heatmap", methods=["GET"])
 def get_risk_heatmap():
     if model is None:
@@ -149,15 +144,14 @@ def get_risk_heatmap():
         return jsonify({"error": str(e)}), 500
 
 
-# --- 4. YOUR ORIGINAL PREDICT ENDPOINT (for personal risk) ---
+# PREDICT ENDPOINT 
 @app.route("/predict", methods=["POST"])
 def predict():
     try:
-        # 1. Instantiate the pipeline
-        # This will load all artifacts needed for this route.
+     
         pipeline = PredictPipeline()
         
-        # 2. Get data from frontend and create CustomData object
+        
         data = request.json
         
         # We must cast numerical values correctly from the JSON
@@ -177,8 +171,7 @@ def predict():
         
         print(f"Received personal risk prediction request for: {custom_data.District}")
         
-        # 3. Run all pipeline functions
-        # 3a. Main prediction
+   
         prediction, confidence, pred_probs = pipeline.predict(custom_data)
         
         # 3b. Age risk profile

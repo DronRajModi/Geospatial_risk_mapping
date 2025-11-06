@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import indiaData from "../data/state.json"; 
-import stateCoords from "../data/state_coords.json"; // Import for state dropdowns
+import stateCoords from "../data/state_coords.json"; 
 
-// --- Chart.js Imports ---
+
 import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -17,7 +17,7 @@ import {
 ChartJS.register(
   CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend
 );
-// --- End Chart.js Imports ---
+
 
 
 export default function SidebarForm({ 
@@ -27,19 +27,13 @@ export default function SidebarForm({
   isLoading,
   personalPrediction,
   onClearPrediction,
-  onNeighborAnalysis // This prop comes from App.jsx
+  onNeighborAnalysis 
 }) {
   return (
     <div className="flex flex-col h-full">
       <div className="flex-grow overflow-y-auto pr-2">
         
-        {/* --- THIS IS THE CRITICAL LOGIC ---
-          * This logic checks if you are in 'personal' mode AND
-          * if 'personalPrediction' data exists. If it does,
-          * it shows the results. Otherwise, it shows the form.
-          * Your current file is probably missing this.
-          * ---
-        */}
+     
         {mode === 'heatmap' ? (
           <HeatmapForm 
             onSubmit={onHeatmapSubmit} 
@@ -57,14 +51,14 @@ export default function SidebarForm({
             isLoading={isLoading} 
           />
         )}
-        {/* --- END OF CRITICAL LOGIC --- */}
+        
       </div>
     </div>
   );
 }
 
 
-// --- Sub-component for the Heatmap Form (With Neighbor Analysis) ---
+// Sub-component for the Heatmap Form (With Neighbor Analysis) 
 function HeatmapForm({ onSubmit, isLoading, onNeighborAnalysis }) {
   const [disease, setDisease] = useState('CVD');
   const [selectedState, setSelectedState] = useState("");
@@ -77,7 +71,7 @@ function HeatmapForm({ onSubmit, isLoading, onNeighborAnalysis }) {
   const handleStateChange = (e) => {
     setSelectedState(e.target.value);
     setSelectedDistrict("");
-    onNeighborAnalysis(e.target.value, null); // Zoom to state
+    onNeighborAnalysis(e.target.value, null); 
   };
   
   const handleDistrictChange = (e) => {
@@ -99,7 +93,7 @@ function HeatmapForm({ onSubmit, isLoading, onNeighborAnalysis }) {
 
   return (
     <div className="space-y-6">
-      {/* Section 1: Generate Heatmap */}
+      {/*  Generate Heatmap */}
       <div>
         <h2 className="text-2xl font-semibold mb-4 text-gray-800">
           View Population Risk
@@ -130,7 +124,7 @@ function HeatmapForm({ onSubmit, isLoading, onNeighborAnalysis }) {
         </form>
       </div>
 
-      {/* Section 2: Analyze Neighbors */}
+      {/* Analyze Neighbors */}
       <div className="border-t pt-6">
         <h2 className="text-2xl font-semibold mb-4 text-gray-800">
           Analyze Spatial Neighbors
@@ -176,7 +170,7 @@ function HeatmapForm({ onSubmit, isLoading, onNeighborAnalysis }) {
 }
 
 
-// --- Sub-component for the Personal Prediction Form (Unchanged) ---
+// Sub-component for the Personal Prediction Form 
 function PersonalForm({ onSubmit, isLoading }) {
   const [formData, setFormData] = useState({
     state: "", District: "", Age: "", Gender: "",
@@ -239,14 +233,14 @@ function PersonalForm({ onSubmit, isLoading }) {
   );
 }
 
-// --- PersonalResults Component (With Neighbors REMOVED) ---
-// This is the component that shows your results.
+
+
 function PersonalResults({ prediction, onClear }) {
   const { results, district } = prediction;
   const { 
     main_prediction, 
     age_risk_profile, 
-    // spatial_neighbors, // <-- This is GONE, as you requested
+    // spatial_neighbors, 
     top_risk_factors, 
     lifestyle_tips 
   } = results;
@@ -330,7 +324,6 @@ function PersonalResults({ prediction, onClear }) {
         </div>
       )}
       
-      {/* 5. Spatial Neighbors section is now GONE */}
     </div>
   );
 }

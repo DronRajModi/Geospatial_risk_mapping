@@ -8,14 +8,14 @@ import numpy as np
 import argparse
 from src.exception import CustomException
 from src.logger import logger as logging
-from src.utils import load_all_artifacts # Import our updated loader
+from src.utils import load_all_artifacts 
 from sklearn.metrics.pairwise import cosine_similarity
 
 class PredictPipeline:
     def __init__(self):
         try:
-            # --- THIS IS THE FIX ---
-            # We now receive 7 items from the loader
+        
+           
             (
                 self.model, 
                 self.preprocessor, 
@@ -23,9 +23,9 @@ class PredictPipeline:
                 self.label_encoder, 
                 self.regional_data_lookup, 
                 self.fallback_data,
-                self.df_gnn_indexed # <-- And we store the GNN data
+                self.df_gnn_indexed 
             ) = load_all_artifacts()
-            # --- END OF FIX ---
+         
             
             # Get the final feature order from the preprocessor
             self.num_cols = self.preprocessor.named_transformers_['num'].feature_names_in_
@@ -37,7 +37,7 @@ class PredictPipeline:
             raise CustomException(e, sys)
 
     def _load_regional_data(self):
-        # This function is now part of load_all_artifacts in utils.py
+       
         pass
 
     def _get_regional_data(self, district_name):
@@ -118,11 +118,11 @@ class PredictPipeline:
             logging.info(f"Finding GNN signature neighbors for: {district_name}")
             target_district = str(district_name).strip().title()
             
-            # --- THIS WILL NOW WORK ---
+           
             target_vector = self.df_gnn_indexed.loc[[target_district]]
             similarity_matrix = cosine_similarity(target_vector, self.df_gnn_indexed)
             similarity_series = pd.Series(similarity_matrix[0], index=self.df_gnn_indexed.index)
-            # ---
+            
             
             top_neighbors = similarity_series.sort_values(ascending=False)[1:4]
             logging.info(f"Found neighbors: {top_neighbors.index.tolist()}")
@@ -143,7 +143,7 @@ class PredictPipeline:
             
             importances = self.model.feature_importances_
             
-            # Get the *final* feature names from the preprocessor
+         
             cat_feature_names = self.preprocessor.named_transformers_['cat'].get_feature_names_out()
             
             all_final_features = list(self.num_cols) + list(cat_feature_names) + list(self.gnn_cols)
@@ -249,7 +249,7 @@ class CustomData:
         except Exception as e:
             raise CustomException(e, sys)
 
-# --- This part allows you to run this file from the command line ---
+
 if __name__ == "__main__":
     logging.info("Running prediction pipeline from command line...")
     

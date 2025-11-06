@@ -2,8 +2,6 @@ import React, { useState } from "react";
 import MapView from "./components/MapVire";
 import SidebarForm from "./components/Sidebar";
 import districtCoords from "./data/district_coords.json";
-// --- NEW IMPORT ---
-// We need the state coordinates for the new zoom feature
 import stateCoords from "./data/state_coords.json"; 
 import Header from "./components/header";
 import './App.css';
@@ -14,19 +12,19 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [mode, setMode] = useState('heatmap');
   
-  // --- NEW STATE ---
+
   // This holds the list of GNN neighbors to highlight
   const [neighborList, setNeighborList] = useState(null); 
   // This holds the [lat, lon] for the map to zoom to
   const [mapZoomTarget, setMapZoomTarget] = useState(null); 
-  // --- END NEW STATE ---
+ 
 
   const handleHeatmapSubmit = async (disease) => {
     setIsLoading(true);
     setHeatmapData(null); 
     setPersonalPrediction(null);
-    setNeighborList(null); // Clear neighbors when loading new heatmap
-    setMapZoomTarget(null); // Clear zoom
+    setNeighborList(null); 
+    setMapZoomTarget(null); 
     try {
       const response = await fetch(`http://127.0.0.1:5000/get_risk_heatmap?disease=${disease}`);
       if (!response.ok) {
@@ -43,11 +41,11 @@ function App() {
   };
 
   const handlePersonalSubmit = async (formData) => {
-    // ... (This function is UNCHANGED) ...
+ 
     setIsLoading(true);
     setPersonalPrediction(null);
-    setNeighborList(null); // Clear neighbors
-    setMapZoomTarget(null); // Clear zoom
+    setNeighborList(null); 
+    setMapZoomTarget(null);
     try {
       const response = await fetch("http://127.0.0.1:5000/predict", {
         method: "POST",
@@ -78,7 +76,6 @@ function App() {
         disease: data.main_prediction.disease, 
         results: data, 
       });
-      // Also set the map zoom for personal prediction
       setMapZoomTarget([coords[0], coords[1]]);
 
     } catch (error) {
@@ -93,10 +90,10 @@ function App() {
     setMapZoomTarget(null); // Clear zoom
   };
 
-  // --- NEW HANDLER FUNCTION ---
+
   const handleNeighborAnalysis = async (state, district) => {
     if (!district) {
-      // If only a state is selected, just zoom to the state
+  
       setMapZoomTarget(stateCoords[state]);
       setNeighborList(null);
       return;
@@ -137,7 +134,7 @@ function App() {
     }
     setIsLoading(false);
   };
-  // --- END NEW HANDLER ---
+ 
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh", backgroundColor: "#fff" }}>
@@ -147,10 +144,9 @@ function App() {
           <MapView
             heatmapData={heatmapData}
             personalPrediction={personalPrediction}
-            // --- PASS NEW PROPS TO MAP ---
             neighborList={neighborList}
             mapZoomTarget={mapZoomTarget}
-            // --- END NEW PROPS ---
+         
           />
         </div>
         <div style={{ width: "350px", padding: "1.5rem", overflowY: "auto", borderLeft: "1px solid #e5e7eb", background: "#ffffff" }}>
@@ -161,9 +157,8 @@ function App() {
             isLoading={isLoading}
             personalPrediction={personalPrediction}
             onClearPrediction={handleClearPrediction}
-            // --- PASS NEW HANDLER TO SIDEBAR ---
             onNeighborAnalysis={handleNeighborAnalysis}
-            // --- END NEW HANDLER ---
+          
           />
         </div>
       </div>

@@ -45,10 +45,10 @@ function ChoroplethLayer({ heatmapData }) {
     if (!feature.properties.district || !heatmapData) {
       return null;
     }
-    // 1. Normalize GeoJSON name: "KEONJHAR (KENDUJHAR)" -> "KEONJHAR"
+    
     const geoJsonName = feature.properties.district.split(' (')[0].trim().toUpperCase();
     
-    // 2. Find the risk. Keys from Python are now UPPERCASE
+
     const risk = heatmapData[geoJsonName];
     
     return risk !== undefined ? risk : null;
@@ -86,7 +86,7 @@ function ChoroplethLayer({ heatmapData }) {
     if (geoJsonRef.current && geoJson) {
       geoJsonRef.current.clearLayers().addData(geoJson);
     }
-  }, [heatmapData, geoJson]); // Re-draws when heatmapData changes
+  }, [heatmapData, geoJson]); 
 
 
   if (!heatmapData || !geoJson) {
@@ -104,7 +104,7 @@ function ChoroplethLayer({ heatmapData }) {
 }
 
 
-// --- 4. Main Map Component (Updated) ---
+//  4. Main Map Component 
 const MapView = ({ heatmapData, personalPrediction }) => {
   const indiaCenter = [20.5937, 78.9629];
   const markerPosition = personalPrediction ? [personalPrediction.lat, personalPrediction.lon] : null;
@@ -121,11 +121,11 @@ const MapView = ({ heatmapData, personalPrediction }) => {
           url="https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png"
         />
 
-        {/* --- HEATMAP LAYER --- */}
-        {/* This now only receives the data for one disease */}
+        {/*  HEATMAP LAYER */}
+
         {heatmapData && <ChoroplethLayer heatmapData={heatmapData} />}
 
-        {/* --- PERSONAL MARKER LAYER --- */}
+        {/*  PERSONAL MARKER LAYER */}
         {personalPrediction && markerPosition && (
           <Marker position={markerPosition}>
             <Popup>
@@ -136,7 +136,6 @@ const MapView = ({ heatmapData, personalPrediction }) => {
           </Marker>
         )}
 
-        {/* --- MAP MOVER --- */}
         <MapFlyTo position={markerPosition} />
 
       </MapContainer>
