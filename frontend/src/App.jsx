@@ -13,16 +13,16 @@ function App() {
   const [mode, setMode] = useState('heatmap');
   
 
-  // This holds the list of GNN neighbors to highlight
+ 
   const [neighborList, setNeighborList] = useState(null); 
-  // This holds the [lat, lon] for the map to zoom to
   const [mapZoomTarget, setMapZoomTarget] = useState(null); 
  
-
+const [highlightedDistrict, setHighlightedDistrict] = useState(null);
   const handleHeatmapSubmit = async (disease) => {
     setIsLoading(true);
     setHeatmapData(null); 
     setPersonalPrediction(null);
+    setHighlightedDistrict(null);
     setNeighborList(null); 
     setMapZoomTarget(null); 
     try {
@@ -44,6 +44,7 @@ function App() {
  
     setIsLoading(true);
     setPersonalPrediction(null);
+    setHighlightedDistrict(null);
     setNeighborList(null); 
     setMapZoomTarget(null);
     try {
@@ -88,6 +89,7 @@ function App() {
   const handleClearPrediction = () => {
     setPersonalPrediction(null);
     setMapZoomTarget(null); // Clear zoom
+    setHighlightedDistrict(null);
   };
 
 
@@ -96,11 +98,13 @@ function App() {
   
       setMapZoomTarget(stateCoords[state]);
       setNeighborList(null);
+      setHighlightedDistrict(null);
       return;
     }
 
     setIsLoading(true);
     setNeighborList(null);
+    setHighlightedDistrict(district); // <--- NEW
     try {
       // 1. Fetch neighbors from our new endpoint
       const response = await fetch(`http://127.0.0.1:5000/get_neighbors?district=${district}`);
@@ -144,7 +148,8 @@ function App() {
           <MapView
             heatmapData={heatmapData}
             personalPrediction={personalPrediction}
-            neighborList={neighborList}
+            gnnNeighbors={neighborList}           // Map 'neighborList' to 'gnnNeighbors'
+            highlightedDistrict={highlightedDistrict} // Pass the name for Blue coloring
             mapZoomTarget={mapZoomTarget}
          
           />

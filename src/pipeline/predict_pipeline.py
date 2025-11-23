@@ -123,7 +123,7 @@ class PredictPipeline:
             similarity_series = pd.Series(similarity_matrix[0], index=self.df_gnn_indexed.index)
             
             
-            top_neighbors = similarity_series.sort_values(ascending=False)[1:4]
+            top_neighbors = similarity_series.sort_values(ascending=False)[1:6]
             logging.info(f"Found neighbors: {top_neighbors.index.tolist()}")
             return top_neighbors.index.tolist()
 

@@ -1,5 +1,4 @@
-# predict_map.py
-# (Corrected Version)
+
 
 import os
 import sys
