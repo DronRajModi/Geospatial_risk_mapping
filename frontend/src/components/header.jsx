@@ -1,16 +1,12 @@
 import React from "react";
 
-
 export default function Header({ mode, setMode }) {
   
-
   const getButtonClasses = (buttonMode) => {
     const baseClasses = "py-2 px-4 rounded-lg font-medium transition-all duration-150";
     if (mode === buttonMode) {
-      
       return `${baseClasses} bg-blue-600 text-white shadow-md`;
     } else {
-      
       return `${baseClasses} bg-gray-200 text-gray-700 hover:bg-gray-300`;
     }
   };
@@ -30,6 +26,15 @@ export default function Header({ mode, setMode }) {
         >
           Population Risk
         </button>
+        
+        {/* NEW BUTTON */}
+        <button
+          onClick={() => setMode('gnn')}
+          className={getButtonClasses('gnn')}
+        >
+          Spatial Analysis
+        </button>
+
         <button
           onClick={() => setMode('personal')}
           className={getButtonClasses('personal')}

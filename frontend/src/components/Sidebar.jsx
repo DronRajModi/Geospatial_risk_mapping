@@ -1,24 +1,12 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import indiaData from "../data/state.json"; 
 import stateCoords from "../data/state_coords.json"; 
-
-
 import { Line } from 'react-chartjs-2';
 import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
+  Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend,
 } from 'chart.js';
-ChartJS.register(
-  CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend
-);
 
-
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
 export default function SidebarForm({ 
   mode, 
@@ -27,63 +15,72 @@ export default function SidebarForm({
   isLoading,
   personalPrediction,
   onClearPrediction,
-  onNeighborAnalysis 
+  onNeighborAnalysis,
+  onZoom, 
+  heatmapData 
 }) {
   return (
     <div className="flex flex-col h-full">
       <div className="flex-grow overflow-y-auto pr-2">
         
      
-        {mode === 'heatmap' ? (
-          <HeatmapForm 
+        {mode === 'heatmap' && (
+          <PopulationRiskForm 
             onSubmit={onHeatmapSubmit} 
             isLoading={isLoading} 
-            onNeighborAnalysis={onNeighborAnalysis}
-          />
-        ) : personalPrediction ? (
-          <PersonalResults 
-            prediction={personalPrediction}
-            onClear={onClearPrediction}
-          />
-        ) : (
-          <PersonalForm 
-            onSubmit={onPersonalSubmit} 
-            isLoading={isLoading} 
+            onZoom={onZoom}
+            heatmapData={heatmapData} 
           />
         )}
-        
+
+      
+        {mode === 'gnn' && (
+          <NeighborAnalysisForm 
+            onNeighborAnalysis={onNeighborAnalysis}
+            isLoading={isLoading}
+            onZoom={onZoom}
+          />
+        )}
+
+     
+        {mode === 'personal' && (
+          personalPrediction ? (
+            <PersonalResults 
+              prediction={personalPrediction}
+              onClear={onClearPrediction}
+            />
+          ) : (
+            <PersonalForm 
+              onSubmit={onPersonalSubmit} 
+              isLoading={isLoading} 
+            />
+          )
+        )}
       </div>
     </div>
   );
 }
 
 
-// Sub-component for the Heatmap Form (With Neighbor Analysis) 
-function HeatmapForm({ onSubmit, isLoading, onNeighborAnalysis }) {
+function PopulationRiskForm({ onSubmit, isLoading, onZoom, heatmapData }) {
   const [disease, setDisease] = useState('CVD');
   const [selectedState, setSelectedState] = useState("");
   const [selectedDistrict, setSelectedDistrict] = useState("");
 
-  // Use stateCoords for the state list, indiaData for the district list
   const stateNames = Object.keys(stateCoords); 
- const districtNames = (selectedState && indiaData[selectedState]) ? indiaData[selectedState] : [];
+  const districtNames = (selectedState && indiaData[selectedState]) ? indiaData[selectedState] : [];
 
   const handleStateChange = (e) => {
-    setSelectedState(e.target.value);
+    const newState = e.target.value;
+    setSelectedState(newState);
     setSelectedDistrict("");
-    onNeighborAnalysis(e.target.value, null); 
+    if (onZoom) onZoom(newState, null); 
   };
-  
+
   const handleDistrictChange = (e) => {
-    setSelectedDistrict(e.target.value);
-  };
-  
-  const handleAnalyzeClick = () => {
-    if (!selectedDistrict) {
-      alert("Please select a district to analyze.");
-      return;
-    }
-    onNeighborAnalysis(selectedState, selectedDistrict);
+    const newDistrict = e.target.value;
+    setSelectedDistrict(newDistrict);
+    if (onZoom) onZoom(selectedState, newDistrict); 
   };
 
   const handleSubmit = (e) => {
@@ -91,22 +88,23 @@ function HeatmapForm({ onSubmit, isLoading, onNeighborAnalysis }) {
     onSubmit(disease);
   };
 
+  
+  let specificRisk = null;
+  if (heatmapData && selectedDistrict) {
+    const normalizedDist = selectedDistrict.toUpperCase();
+    if (heatmapData[normalizedDist] !== undefined) {
+      specificRisk = heatmapData[normalizedDist];
+    }
+  }
+
   return (
     <div className="space-y-6">
-      {/*  Generate Heatmap */}
       <div>
-        <h2 className="text-2xl font-semibold mb-4 text-gray-800">
-          View Population Risk
-        </h2>
+        <h2 className="text-2xl font-semibold mb-4 text-gray-800">Population Risk</h2>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-gray-600 font-medium mb-1">Select Disease</label>
-            <select
-              name="disease"
-              value={disease}
-              onChange={(e) => setDisease(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
+            <select name="disease" value={disease} onChange={(e) => setDisease(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-white text-black focus:outline-none focus:ring-2 focus:ring-blue-500">
               <option value="CVD">Cardiovascular Disease</option>
               <option value="Liver_Cancer">Liver Cancer</option>
               <option value="Breast_Cancer">Breast Cancer</option>
@@ -114,61 +112,96 @@ function HeatmapForm({ onSubmit, isLoading, onNeighborAnalysis }) {
               <option value="Lung_Cancer">Lung Cancer</option>
             </select>
           </div>
-          <button
-            type="submit"
-            className="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 disabled:bg-gray-400 font-medium shadow-md"
-            disabled={isLoading}
-          >
+          <button type="submit" className="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 disabled:bg-gray-400 font-medium shadow-md" disabled={isLoading}>
             {isLoading ? "Generating..." : "Show Risk Heatmap"}
           </button>
         </form>
       </div>
 
-      {/* Analyze Neighbors */}
-      <div className="border-t pt-6">
-        <h2 className="text-2xl font-semibold mb-4 text-gray-800">
-          Analyze Spatial Neighbors
-        </h2>
-        <div className="space-y-4">
-          <div>
-            <label className="block text-gray-600 font-medium mb-1">Select State</label>
-            <select
-              name="state"
-              value={selectedState}
-              onChange={handleStateChange}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">Select State to Zoom</option>
-              {stateNames.map((state) => ( <option key={state} value={state}>{state}</option> ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-gray-600 font-medium mb-1">Select District</label>
-            <select
-              name="district"
-              value={selectedDistrict}
-              onChange={handleDistrictChange}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              disabled={!selectedState}
-            >
-              <option value="">Select District to Analyze</option>
-              {districtNames.map((dist) => ( <option key={dist} value={dist}>{dist}</option> ))}
-            </select>
-          </div>
-          <button
-            type="button"
-            onClick={handleAnalyzeClick}
-            className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 font-medium shadow-md"
-            disabled={isLoading || !selectedDistrict}
-          >
-            {isLoading ? "Analyzing..." : "Highlight GNN Neighbors"}
-          </button>
+      {/* Zoom Controls inside Population Risk */}
+      <div className="border-t pt-4">
+        <h3 className="text-lg font-medium text-gray-700 mb-2">Explore Region</h3>
+        <div className="space-y-3">
+          <select value={selectedState} onChange={handleStateChange} className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-white text-black">
+            <option value="">Select State to Zoom</option>
+            {stateNames.map((state) => (<option key={state} value={state}>{state}</option>))}
+          </select>
+          <select value={selectedDistrict} onChange={handleDistrictChange} className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-white text-black" disabled={!selectedState}>
+            <option value="">Select District to Zoom</option>
+            {districtNames.map((dist) => (<option key={dist} value={dist}>{dist}</option>))}
+          </select>
         </div>
       </div>
+
+      {/* Display Specific Risk Score */}
+      {selectedDistrict && (
+        <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <p className="text-sm text-gray-600">Average Risk for</p>
+          <p className="font-bold text-gray-800 text-lg">{selectedDistrict}</p>
+          <div className="mt-2 text-3xl font-bold text-blue-700">
+            {specificRisk !== null ? `${specificRisk}%` : "No Data"}
+          </div>
+          <p className="text-xs text-gray-500 mt-1">Based on synthetic population analysis</p>
+        </div>
+      )}
     </div>
   );
 }
 
+// --- COMPONENT 2: GNN NEIGHBOR ANALYSIS FORM ---
+function NeighborAnalysisForm({ onNeighborAnalysis, isLoading, onZoom }) {
+  const [selectedState, setSelectedState] = useState("");
+  const [selectedDistrict, setSelectedDistrict] = useState("");
+  // const [disease, setDisease] = useState('CVD'); // Context for popup
+
+  const stateNames = Object.keys(stateCoords); 
+  const districtNames = (selectedState && indiaData[selectedState]) ? indiaData[selectedState] : [];
+
+  const handleStateChange = (e) => {
+    const newState = e.target.value;
+    setSelectedState(newState);
+    setSelectedDistrict("");
+    if (onZoom) onZoom(newState, null);
+  };
+
+  const handleDistrictChange = (e) => {
+    const newDistrict = e.target.value;
+    setSelectedDistrict(newDistrict);
+    if (onZoom) onZoom(selectedState, newDistrict);
+  };
+
+  const handleAnalyze = () => {
+    if (!selectedDistrict) return alert("Select a district");
+    onNeighborAnalysis(selectedState, selectedDistrict);
+  };
+
+  return (
+    <div className="space-y-6">
+      <h2 className="text-2xl font-semibold mb-4 text-gray-800">Spatial Neighbors (GNN)</h2>
+      <p className="text-sm text-gray-600 mb-4">
+        Find districts that are "structurally similar" (Socio-Economic Twins) to the selected district using Graph Neural Networks.
+      </p>
+      
+      {/* Context Selector */}
+     
+
+      <div className="space-y-3">
+        <select value={selectedState} onChange={handleStateChange} className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-white text-black">
+          <option value="">Select State</option>
+          {stateNames.map((state) => (<option key={state} value={state}>{state}</option>))}
+        </select>
+        <select value={selectedDistrict} onChange={handleDistrictChange} className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-white text-black" disabled={!selectedState}>
+          <option value="">Select District</option>
+          {districtNames.map((dist) => (<option key={dist} value={dist}>{dist}</option>))}
+        </select>
+      </div>
+
+      <button onClick={handleAnalyze} className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 font-medium shadow-md" disabled={isLoading || !selectedDistrict}>
+        {isLoading ? "Analyzing..." : "Find Similar Districts"}
+      </button>
+    </div>
+  );
+}
 
 // Sub-component for the Personal Prediction Form 
 function PersonalForm({ onSubmit, isLoading }) {

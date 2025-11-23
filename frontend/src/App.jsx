@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import MapView from "./components/MapVire";
+import React, { useState, useEffect } from "react";
+import MapView from "../src/components/MapVire"; // Ensure filename matches exactly
 import SidebarForm from "./components/Sidebar";
 import districtCoords from "./data/district_coords.json";
 import stateCoords from "./data/state_coords.json"; 
@@ -10,21 +10,62 @@ function App() {
   const [heatmapData, setHeatmapData] = useState(null);
   const [personalPrediction, setPersonalPrediction] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [mode, setMode] = useState('heatmap');
   
 
- 
+  const [mode, setMode] = useState('heatmap');
+  
   const [neighborList, setNeighborList] = useState(null); 
   const [mapZoomTarget, setMapZoomTarget] = useState(null); 
- 
-const [highlightedDistrict, setHighlightedDistrict] = useState(null);
+  const [highlightedDistrict, setHighlightedDistrict] = useState(null);
+  const [currentDiseaseLabel, setCurrentDiseaseLabel] = useState("");
+
+  // --- 1. RESET MAP WHEN SWITCHING TABS ---
+  useEffect(() => {
+    setNeighborList(null);
+    setHighlightedDistrict(null);
+    setPersonalPrediction(null);
+    // Reset zoom to center of India
+    setMapZoomTarget([20.5937, 78.9629]); 
+  }, [mode]);
+
+  // --- 2. MANUAL ZOOM FUNCTION (Fixes Zoom Issue) ---
+  const handleManualZoom = (state, district) => {
+    if (district) {
+      // Try exact match first
+      let coords = districtCoords[district];
+      
+      // Try normalized match if exact fails
+      if (!coords) {
+        const normKey = Object.keys(districtCoords).find(k => 
+          k.split(' (')[0].trim().toUpperCase() === district.split(' (')[0].trim().toUpperCase()
+        );
+        if(normKey) coords = districtCoords[normKey];
+      }
+
+      if (coords) {
+        setMapZoomTarget([coords[0], coords[1]]);
+      }
+    } 
+    else if (state) {
+      // Zoom to state
+      const coords = stateCoords[state];
+      if (coords) {
+        setMapZoomTarget([coords[0], coords[1]]);
+      }
+    }
+  };
+
   const handleHeatmapSubmit = async (disease) => {
     setIsLoading(true);
     setHeatmapData(null); 
+    // Reset other layers so they don't overlap
     setPersonalPrediction(null);
     setHighlightedDistrict(null);
     setNeighborList(null); 
-    setMapZoomTarget(null); 
+    
+    // Zoom out to India so user sees the whole heatmap
+    setMapZoomTarget([20.5937, 78.9629]); 
+
     try {
       const response = await fetch(`http://127.0.0.1:5000/get_risk_heatmap?disease=${disease}`);
       if (!response.ok) {
@@ -41,12 +82,11 @@ const [highlightedDistrict, setHighlightedDistrict] = useState(null);
   };
 
   const handlePersonalSubmit = async (formData) => {
- 
     setIsLoading(true);
     setPersonalPrediction(null);
     setHighlightedDistrict(null);
     setNeighborList(null); 
-    setMapZoomTarget(null);
+    
     try {
       const response = await fetch("http://127.0.0.1:5000/predict", {
         method: "POST",
@@ -59,25 +99,25 @@ const [highlightedDistrict, setHighlightedDistrict] = useState(null);
       }
       const data = await response.json();
       const districtName = formData.District; 
+      
+      // Coordinate lookup
       let coords = districtCoords[districtName];
       if (!coords) {
         const normKey = Object.keys(districtCoords).find(k => 
           k.split(' (')[0].trim().toUpperCase() === districtName.split(' (')[0].trim().toUpperCase()
         );
-        if(normKey) {
-            coords = districtCoords[normKey];
-        } else {
-            throw new Error(`Coordinates not found for district: ${districtName}`);
-        }
+        if(normKey) coords = districtCoords[normKey];
       }
+
       setPersonalPrediction({
-        lat: coords[0],
-        lon: coords[1],
+        lat: coords ? coords[0] : 20.5937,
+        lon: coords ? coords[1] : 78.9629,
         district: districtName,
         disease: data.main_prediction.disease, 
         results: data, 
       });
-      setMapZoomTarget([coords[0], coords[1]]);
+      
+      if(coords) setMapZoomTarget([coords[0], coords[1]]);
 
     } catch (error) {
       console.error("Error fetching prediction:", error);
@@ -88,15 +128,13 @@ const [highlightedDistrict, setHighlightedDistrict] = useState(null);
 
   const handleClearPrediction = () => {
     setPersonalPrediction(null);
-    setMapZoomTarget(null); // Clear zoom
+    setMapZoomTarget([20.5937, 78.9629]); 
     setHighlightedDistrict(null);
   };
 
-
-  const handleNeighborAnalysis = async (state, district) => {
+  const handleNeighborAnalysis = async (state, district, disease) => {
     if (!district) {
-  
-      setMapZoomTarget(stateCoords[state]);
+      handleManualZoom(state, null);
       setNeighborList(null);
       setHighlightedDistrict(null);
       return;
@@ -104,54 +142,37 @@ const [highlightedDistrict, setHighlightedDistrict] = useState(null);
 
     setIsLoading(true);
     setNeighborList(null);
-    setHighlightedDistrict(district); // <--- NEW
+    setHighlightedDistrict(district); 
+    setCurrentDiseaseLabel(disease); // Store context
+    
+    // Zoom immediately
+    handleManualZoom(state, district);
+
     try {
-      // 1. Fetch neighbors from our new endpoint
       const response = await fetch(`http://127.0.0.1:5000/get_neighbors?district=${district}`);
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error || "Neighbor analysis failed.");
-      }
+      if (!response.ok) throw new Error("Neighbor analysis failed.");
       const data = await response.json();
-      
-      // 2. Set the neighbor list for highlighting
       setNeighborList(data.neighbors);
-
-      // 3. Find coords for the selected district and zoom
-      let coords = districtCoords[district];
-      if (!coords) {
-        const normKey = Object.keys(districtCoords).find(k => 
-          k.split(' (')[0].trim().toUpperCase() === district.split(' (')[0].trim().toUpperCase()
-        );
-        if(normKey) { coords = districtCoords[normKey]; }
-      }
-      if (coords) {
-        setMapZoomTarget([coords[0], coords[1]]);
-      } else {
-        // Fallback to state zoom if district coords not found
-        setMapZoomTarget(stateCoords[state]);
-      }
-
     } catch (error) {
       console.error("Error fetching neighbors:", error);
       alert(`Error: ${error.message}`);
     }
     setIsLoading(false);
   };
- 
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh", backgroundColor: "#fff" }}>
       <Header mode={mode} setMode={setMode} />
+      
       <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
         <div style={{ flex: 1, height: "100%" }}>
           <MapView
             heatmapData={heatmapData}
             personalPrediction={personalPrediction}
-            gnnNeighbors={neighborList}           // Map 'neighborList' to 'gnnNeighbors'
-            highlightedDistrict={highlightedDistrict} // Pass the name for Blue coloring
+            gnnNeighbors={neighborList}           
+            highlightedDistrict={highlightedDistrict} 
             mapZoomTarget={mapZoomTarget}
-         
+            selectedDisease={currentDiseaseLabel} // Pass context to map
           />
         </div>
         <div style={{ width: "350px", padding: "1.5rem", overflowY: "auto", borderLeft: "1px solid #e5e7eb", background: "#ffffff" }}>
@@ -163,7 +184,10 @@ const [highlightedDistrict, setHighlightedDistrict] = useState(null);
             personalPrediction={personalPrediction}
             onClearPrediction={handleClearPrediction}
             onNeighborAnalysis={handleNeighborAnalysis}
-          
+            
+            // --- 3. PASSING MISSING PROPS ---
+            onZoom={handleManualZoom} // Fixes Zoom
+            heatmapData={heatmapData} // Fixes Data Display in Sidebar
           />
         </div>
       </div>
