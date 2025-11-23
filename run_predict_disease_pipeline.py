@@ -4,9 +4,9 @@ import pandas as pd
 import numpy as np
 from sklearn.preprocessing import StandardScaler
 
-# -----------------------------
+
 # CONFIGURATION
-# -----------------------------
+ 
 ARTIFACTS_DIR = "artifacts"
 DATA_FILE = os.path.join(ARTIFACTS_DIR, "data.csv")
 IMPUTED_FEATURES_FILE = os.path.join(ARTIFACTS_DIR, "imputed_features.csv")
@@ -18,9 +18,9 @@ MODEL_FILE = os.path.join(ARTIFACTS_DIR, "model_rf.pkl")
 LABEL_ENCODER_FILE = os.path.join(ARTIFACTS_DIR, "label_encoder.pkl")
 
 
-# -----------------------------
+ 
 # LOAD ARTIFACTS
-# -----------------------------
+ 
 def load_artifacts():
     print("[INFO] Loading artifacts...")
 
@@ -44,9 +44,9 @@ def load_artifacts():
     return df_data, df_imputed, df_gnn, preprocessor, scaler, model, label_encoder
 
 
-# -----------------------------
+ 
 # PREPARE ENVIRONMENT LOOKUP
-# -----------------------------
+ 
 def prepare_environment_lookup(df_data, df_imputed, df_gnn):
     for df in [df_data, df_imputed, df_gnn]:
         df.columns = [c.strip() for c in df.columns]
@@ -78,9 +78,9 @@ def prepare_environment_lookup(df_data, df_imputed, df_gnn):
     return df_data_unique, df_env
 
 
-# -----------------------------
+ 
 # PREDICTION FUNCTION
-# -----------------------------
+ 
 def predict_disease_for_person(person_details, preprocessor, scaler, model, label_encoder, df_data_unique, df_env):
     district = person_details.get("District", "").strip()
     if not district:
@@ -140,9 +140,9 @@ def predict_disease_for_person(person_details, preprocessor, scaler, model, labe
 
 
 
-# -----------------------------
+ 
 # MAIN EXECUTION (for testing)
-# -----------------------------
+ 
 if __name__ == "__main__":
     df_data, df_imputed, df_gnn, preprocessor, scaler, model, label_encoder = load_artifacts()
     df_data_unique, df_env = prepare_environment_lookup(df_data, df_imputed, df_gnn)
@@ -167,6 +167,6 @@ if __name__ == "__main__":
             preprocessor, scaler, model, label_encoder,
             df_data_unique, df_env
         )
-        print(f"\n✅ Predicted Disease for {person_details['District']}: {predicted_disease}")
+        print(f"\nPredicted Disease for {person_details['District']}: {predicted_disease}")
     except Exception as e:
         print(f"[ERROR] Prediction failed: {e}")

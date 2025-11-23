@@ -66,7 +66,7 @@ function HeatmapForm({ onSubmit, isLoading, onNeighborAnalysis }) {
 
   // Use stateCoords for the state list, indiaData for the district list
   const stateNames = Object.keys(stateCoords); 
-  const districtNames = selectedState ? indiaData[selectedState] : []; 
+ const districtNames = (selectedState && indiaData[selectedState]) ? indiaData[selectedState] : [];
 
   const handleStateChange = (e) => {
     setSelectedState(e.target.value);
