@@ -1,4 +1,3 @@
-# src/pipeline/predict_pipeline.py
 
 import os
 import sys

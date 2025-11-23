@@ -1,0 +1,16 @@
+numpy
+pandas
+seaborn
+scikit-learn
+matplotlib
+catboost
+xgboost
+Flask
+geopandas
+dill
+tensorflow
+imbalanced-learn
+networkx
+torch
+torch_geometric
+libpysal

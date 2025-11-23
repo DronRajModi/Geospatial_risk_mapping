@@ -1,4 +1,3 @@
-# src/components/data_transformation_smote.py
 import os
 import sys
 import pickle
@@ -14,7 +13,6 @@ from imblearn.over_sampling import SMOTENC
 from src.exception import CustomException
 from src.logger import logger as logging
 
-# --- Helper functions (same as before) ---
 def _load_df(maybe_df_or_path):
     if isinstance(maybe_df_or_path, pd.DataFrame):
         return maybe_df_or_path.copy()
@@ -78,7 +76,6 @@ def build_preprocessing_pipeline(df: pd.DataFrame):
     except Exception as e:
         raise CustomException(e, sys)
 
-# --- This is the main function we will call ---
 def initiate_data_transformation_smote(train_input, test_input, artifacts_dir="artifacts"):
     try:
         logging.info("Initiating Data Transformation Component (with SMOTE-NC)")
@@ -103,10 +100,8 @@ def initiate_data_transformation_smote(train_input, test_input, artifacts_dir="a
         
         logging.info(f"Original training class distribution:\n{y_train_series.value_counts().to_string()}")
 
-        # --- Step 1: Build Preprocessing Pipeline ---
         preprocessor, numeric_cols, categorical_cols, categorical_features_indices = build_preprocessing_pipeline(X_train_df)
         
-        # --- Step 2: Apply SMOTE-NC (Stage B) ---
         logging.info("Applying SMOTE-NC for class imbalance...")
         
         min_class_count = y_train_series.value_counts().min()
@@ -134,20 +129,17 @@ def initiate_data_transformation_smote(train_input, test_input, artifacts_dir="a
                 X_train_resampled = X_train_df
                 y_train_resampled = y_train_series
 
-        # --- Step 3: Preprocessing (Imputation & Encoding) ---
         logging.info("Applying preprocessing (imputer/encoder)...")
         X_train_processed = preprocessor.fit_transform(X_train_resampled)
         X_test_processed = preprocessor.transform(X_test_df)
         logging.info("Data preprocessing (imputation/encoding) complete.")
 
-        # --- Step 4: Scaling ---
         logging.info("Applying StandardScaler.")
         scaler = StandardScaler()
         X_train_scaled = scaler.fit_transform(X_train_processed)
         X_test_scaled = scaler.transform(X_test_processed)
         logging.info("Data scaling complete.")
 
-        # --- Step 5: Target Encoding ---
         logging.info("Encoding target variable.")
         label_encoder = LabelEncoder()
         y_train_encoded = label_encoder.fit_transform(y_train_resampled)
@@ -158,11 +150,8 @@ def initiate_data_transformation_smote(train_input, test_input, artifacts_dir="a
         y_train_encoded = y_train_encoded.reshape(-1, 1)
         y_test_encoded = y_test_encoded.reshape(-1, 1)
 
-        # --- Combine features + target ---
         train_arr_scaled_aug = np.hstack([X_train_scaled, y_train_encoded])
         test_arr_scaled = np.hstack([X_test_scaled, y_test_encoded])
-
-        # --- Save objects ---
         preprocessor_path = os.path.join(artifacts_dir, "transformer_smote.pkl") # New name
         scaler_path = os.path.join(artifacts_dir, "scaler_smote.pkl") # New name
         label_encoder_path = os.path.join(artifacts_dir, "label_encoder.pkl")
@@ -171,7 +160,6 @@ def initiate_data_transformation_smote(train_input, test_input, artifacts_dir="a
         with open(scaler_path, "wb") as f: pickle.dump(scaler, f)
         with open(label_encoder_path, "wb") as f: pickle.dump(label_encoder, f)
 
-        # Save metadata
         try:
              feature_names_out = preprocessor.get_feature_names_out()
         except AttributeError:
