@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import MapView from "../src/components/MapVire"; // Ensure filename matches exactly
+import MapView from "../src/components/MapVire";
 import SidebarForm from "./components/Sidebar";
 import districtCoords from "./data/district_coords.json";
 import stateCoords from "./data/state_coords.json"; 
@@ -19,7 +19,7 @@ function App() {
   const [highlightedDistrict, setHighlightedDistrict] = useState(null);
   const [currentDiseaseLabel, setCurrentDiseaseLabel] = useState("");
 
-  // --- 1. RESET MAP WHEN SWITCHING TABS ---
+  // RESET MAP WHEN SWITCHING TABS
   useEffect(() => {
     setNeighborList(null);
     setHighlightedDistrict(null);
@@ -28,13 +28,11 @@ function App() {
     setMapZoomTarget([20.5937, 78.9629]); 
   }, [mode]);
 
-  // --- 2. MANUAL ZOOM FUNCTION (Fixes Zoom Issue) ---
+
   const handleManualZoom = (state, district) => {
     if (district) {
-      // Try exact match first
+
       let coords = districtCoords[district];
-      
-      // Try normalized match if exact fails
       if (!coords) {
         const normKey = Object.keys(districtCoords).find(k => 
           k.split(' (')[0].trim().toUpperCase() === district.split(' (')[0].trim().toUpperCase()
@@ -47,7 +45,6 @@ function App() {
       }
     } 
     else if (state) {
-      // Zoom to state
       const coords = stateCoords[state];
       if (coords) {
         setMapZoomTarget([coords[0], coords[1]]);
@@ -58,12 +55,9 @@ function App() {
   const handleHeatmapSubmit = async (disease) => {
     setIsLoading(true);
     setHeatmapData(null); 
-    // Reset other layers so they don't overlap
     setPersonalPrediction(null);
     setHighlightedDistrict(null);
     setNeighborList(null); 
-    
-    // Zoom out to India so user sees the whole heatmap
     setMapZoomTarget([20.5937, 78.9629]); 
 
     try {
@@ -100,7 +94,7 @@ function App() {
       const data = await response.json();
       const districtName = formData.District; 
       
-      // Coordinate lookup
+
       let coords = districtCoords[districtName];
       if (!coords) {
         const normKey = Object.keys(districtCoords).find(k => 
@@ -143,9 +137,7 @@ function App() {
     setIsLoading(true);
     setNeighborList(null);
     setHighlightedDistrict(district); 
-    setCurrentDiseaseLabel(disease); // Store context
-    
-    // Zoom immediately
+    setCurrentDiseaseLabel(disease); 
     handleManualZoom(state, district);
 
     try {
@@ -172,7 +164,7 @@ function App() {
             gnnNeighbors={neighborList}           
             highlightedDistrict={highlightedDistrict} 
             mapZoomTarget={mapZoomTarget}
-            selectedDisease={currentDiseaseLabel} // Pass context to map
+            selectedDisease={currentDiseaseLabel} 
           />
         </div>
         <div style={{ width: "350px", padding: "1.5rem", overflowY: "auto", borderLeft: "1px solid #e5e7eb", background: "#ffffff" }}>
@@ -184,10 +176,8 @@ function App() {
             personalPrediction={personalPrediction}
             onClearPrediction={handleClearPrediction}
             onNeighborAnalysis={handleNeighborAnalysis}
-            
-            // --- 3. PASSING MISSING PROPS ---
-            onZoom={handleManualZoom} // Fixes Zoom
-            heatmapData={heatmapData} // Fixes Data Display in Sidebar
+            onZoom={handleManualZoom} 
+            heatmapData={heatmapData} 
           />
         </div>
       </div>

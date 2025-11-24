@@ -174,7 +174,7 @@ def initiate_data_transformation_smote(train_input, test_input, artifacts_dir="a
             "target_classes": list(label_encoder.classes_),
             "feature_count_processed": X_train_scaled.shape[1]
         }
-        meta_path = os.path.join(artifacts_dir, "transformer_meta_smote.pkl") # New name
+        meta_path = os.path.join(artifacts_dir, "transformer_meta_smote.pkl") 
         with open(meta_path, "wb") as f:
             pickle.dump(meta, f)
             

@@ -1,5 +1,3 @@
-import React from "react";
-
 export default function Header({ mode, setMode }) {
   
   const getButtonClasses = (buttonMode) => {
@@ -13,12 +11,12 @@ export default function Header({ mode, setMode }) {
 
   return (
     <header className="bg-white text-gray-800 p-4 shadow-sm border-b border-gray-200 flex justify-between items-center">
-      {/* Title */}
+    
       <h1 className="font-semibold text-xl text-gray-700">
         Geospatial Risk Mapping of NCDs
       </h1>
 
-      {/* Mode Toggle Buttons */}
+  
       <div className="flex space-x-2">
         <button
           onClick={() => setMode('heatmap')}
@@ -26,8 +24,6 @@ export default function Header({ mode, setMode }) {
         >
           Population Risk
         </button>
-        
-        {/* NEW BUTTON */}
         <button
           onClick={() => setMode('gnn')}
           className={getButtonClasses('gnn')}

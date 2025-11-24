@@ -5,7 +5,7 @@ import numpy as np
 from sklearn.preprocessing import StandardScaler
 
 
-# CONFIGURATION
+
  
 ARTIFACTS_DIR = "artifacts"
 DATA_FILE = os.path.join(ARTIFACTS_DIR, "data.csv")
@@ -17,9 +17,6 @@ SCALER_FILE = os.path.join(ARTIFACTS_DIR, "final_scaler.pkl")
 MODEL_FILE = os.path.join(ARTIFACTS_DIR, "model_rf.pkl")
 LABEL_ENCODER_FILE = os.path.join(ARTIFACTS_DIR, "label_encoder.pkl")
 
-
- 
-# LOAD ARTIFACTS
  
 def load_artifacts():
     print("[INFO] Loading artifacts...")
@@ -45,7 +42,7 @@ def load_artifacts():
 
 
  
-# PREPARE ENVIRONMENT LOOKUP
+
  
 def prepare_environment_lookup(df_data, df_imputed, df_gnn):
     for df in [df_data, df_imputed, df_gnn]:
@@ -79,14 +76,14 @@ def prepare_environment_lookup(df_data, df_imputed, df_gnn):
 
 
  
-# PREDICTION FUNCTION
+
  
 def predict_disease_for_person(person_details, preprocessor, scaler, model, label_encoder, df_data_unique, df_env):
     district = person_details.get("District", "").strip()
     if not district:
         raise ValueError("Please provide a 'District' in person_details.")
 
-    # Find matching district data
+
     match = df_data_unique[df_data_unique["District"].str.strip().str.lower() == district.lower()]
     if match.empty:
         match = df_env[df_env["District"].str.strip().str.lower() == district.lower()]
@@ -97,15 +94,15 @@ def predict_disease_for_person(person_details, preprocessor, scaler, model, labe
     input_data = {**person_details, **district_row}
     df_input = pd.DataFrame([input_data])
 
-    # --- Decide which preprocessing to apply ---
+
     print("\n[INFO] Model expects", model.n_features_in_, "features.")
     print("[INFO] Input has", df_input.shape[1], "columns.")
     print("[INFO] Preprocessor input feature count:", len(preprocessor.feature_names_in_))
 
-    # Step 1: Align columns to preprocessor if feature count matches
+   
     if model.n_features_in_ == len(preprocessor.feature_names_in_):
         print("[INFO] Applying preprocessing + scaling before prediction...")
-        # Align columns
+      
         feature_cols = list(preprocessor.feature_names_in_)
         for col in feature_cols:
             if col not in df_input.columns:
@@ -116,12 +113,12 @@ def predict_disease_for_person(person_details, preprocessor, scaler, model, labe
         X_scaled = scaler.transform(X_processed)
         X_final = X_scaled
 
-    # Step 2: If model expects fewer features, skip preprocessing
+    
     else:
         print("[INFO] Model trained on preprocessed/scaled features already — skipping preprocessing.")
-        # Keep only numeric columns
+   
         df_num = df_input.select_dtypes(include=[np.number]).fillna(0)
-        # Align to model’s expected input feature count
+    
         if df_num.shape[1] > model.n_features_in_:
             df_num = df_num.iloc[:, :model.n_features_in_]
         elif df_num.shape[1] < model.n_features_in_:
@@ -129,7 +126,6 @@ def predict_disease_for_person(person_details, preprocessor, scaler, model, labe
                 df_num[f"extra_{i}"] = 0
         X_final = df_num.values
 
-    # --- Predict disease ---
     try:
         y_pred = model.predict(X_final)
         y_prob = np.max(model.predict_proba(X_final))
@@ -141,7 +137,7 @@ def predict_disease_for_person(person_details, preprocessor, scaler, model, labe
 
 
  
-# MAIN EXECUTION (for testing)
+
  
 if __name__ == "__main__":
     df_data, df_imputed, df_gnn, preprocessor, scaler, model, label_encoder = load_artifacts()

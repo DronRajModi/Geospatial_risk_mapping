@@ -26,7 +26,6 @@ class PredictPipeline:
             ) = load_all_artifacts()
          
             
-            # Get the final feature order from the preprocessor
             self.num_cols = self.preprocessor.named_transformers_['num'].feature_names_in_
             self.cat_cols = self.preprocessor.named_transformers_['cat'].feature_names_in_
             self.gnn_cols = self.preprocessor.named_transformers_['gnn'].feature_names_in_
@@ -277,31 +276,31 @@ if __name__ == "__main__":
     
     pipeline = PredictPipeline()
     
-    # Test 1: Main Prediction
+   
     prediction, confidence, pred_probs = pipeline.predict(data)
     print("\n--- Prediction ---")
     print(f"Predicted Disease: {prediction}")
     print(f"Confidence: {confidence}")
     
-    # Test 2: Age Risk Plot
+
     age_labels, age_scores = pipeline.get_age_risk_profile(data, prediction)
     print("\n--- Age Risk Profile ---")
     print(f"Ages: {age_labels}")
     print(f"Risk Scores (%): {age_scores}")
     
-    # Test 3: GNN Neighbors
+
     neighbors = pipeline.get_signature_neighbors(data.District)
     print("\n--- GNN Signature Neighbors ---")
     print(f"Districts spatially similar to {data.District}: {neighbors}")
 
-    # Test 4: Feature Importance
+
     importances = pipeline.get_feature_importances()
     print("\n--- Top 5 Model Risk Factors ---")
     if importances:
         for feature, importance in importances.items():
             print(f"{feature}: {importance*100:.2f}%")
         
-    # Test 5: Lifestyle What-If
+  
     lifestyle_results = pipeline.get_lifestyle_what_if(data, pred_probs)
     print("\n--- Lifestyle 'What-If' Analysis ---")
     if lifestyle_results:

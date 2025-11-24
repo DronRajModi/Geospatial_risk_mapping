@@ -16,7 +16,6 @@ function MapFlyTo({ position }) {
   const map = useMap();
   useEffect(() => {
     if (position) {
-      // Zoom in if it's a specific district (GN/Prediction), Zoom out if it's India (Heatmap)
       const zoomLevel = position[0] === 20.5937 ? 5 : 8; 
       map.flyTo(position, zoomLevel);
     }
@@ -63,15 +62,14 @@ function ChoroplethLayer({ heatmapData, gnnNeighbors, highlightedDistrict }) {
     const isNeighbor = gnnNeighbors && gnnNeighbors.some(n => normalizeName(n) === districtNameNorm);
     const isSelected = highlightedDistrict && districtNameNorm === selectedNorm;
 
-    // 1. Blue Selection
     if (isSelected) {
       return { fillColor: "#2563EB", weight: 2, opacity: 1, color: "white", fillOpacity: 1 };
     }
-    // 2. Red Neighbors
+  
     if (isNeighbor) {
       return { fillColor: "#DC2626", weight: 2, opacity: 1, color: "#7F1D1D", fillOpacity: 0.8 };
     }
-    // 3. Heatmap
+  
     if (heatmapData) {
       const risk = getRiskForDistrict(feature);
       return { 
@@ -83,7 +81,7 @@ function ChoroplethLayer({ heatmapData, gnnNeighbors, highlightedDistrict }) {
         fillOpacity: (risk === null ? 0.2 : 0.7) 
       };
     }
-    // 4. Default Grey
+   
     return { fillColor: "#DDDDDD", weight: 0.5, opacity: 1, color: 'white', dashArray: '3', fillOpacity: 0.2 };
   }
 
@@ -102,10 +100,6 @@ function ChoroplethLayer({ heatmapData, gnnNeighbors, highlightedDistrict }) {
   }
 
   if (!geoJson) return null;
-
-  // --- THE CRITICAL FIX IS HERE ---
-  // We create a unique key string. Whenever this string changes, 
-  // React destroys the old GeoJSON layer and builds a new one with the correct colors.
   const layerKey = `layer-${heatmapData ? 'heat' : 'noheat'}-${highlightedDistrict || 'none'}-${gnnNeighbors ? gnnNeighbors.length : 0}`;
 
   return (

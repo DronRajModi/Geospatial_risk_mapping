@@ -25,7 +25,7 @@ class TrainPipelineSMOTE:
         
             logging.info("STEP 1: Data Ingestion (Skipped, using existing artifacts)")
             
-            # Stage A - Spatial Imputation 
+      
             logging.info("STEP 2: Starting Stage A: Spatial Imputation")
             SHAPEFILE_DISTRICT_COL = 'NAME_2' 
             spatial_imputer_obj = SpatialImputer()
@@ -36,7 +36,7 @@ class TrainPipelineSMOTE:
             logging.info(f"Stage A complete. Full imputed feature set at {imputed_features_path}")
 
             
-            # Data Transformation & Augmentation (Stage B with SMOTE-NC) 
+          
             logging.info("STEP 3: Running Data Transformation (with SMOTE-NC augmentation)")
           
             train_arr_scaled_aug, test_arr_scaled, preprocessor_path, scaler_path = initiate_data_transformation_smote(
@@ -47,7 +47,7 @@ class TrainPipelineSMOTE:
             logging.info("Data Transformation and Augmentation complete.")
 
             
-            #  Model Trainer (Original RandomForest) 
+          
             logging.info("STEP 4: Running Model Trainer")
             model_trainer_obj = initiate_model_training(
                 train_arr=train_arr_scaled_aug, 

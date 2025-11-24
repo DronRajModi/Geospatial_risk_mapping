@@ -10,7 +10,6 @@ import logging
 from datetime import datetime
 from sklearn.model_selection import train_test_split
 
-# --- 1. SETUP LOGGER ---
 LOG_FILE = f"{datetime.now().strftime('%Y_%m_%d_%H_%M_%S')}.log"
 logs_path = os.path.join(os.getcwd(), "logs")
 os.makedirs(logs_path, exist_ok=True)
@@ -25,7 +24,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger("SMOTEPipelineLogger")
 
-# --- 2. DEFINE EXCEPTION ---
 class CustomException(Exception):
     def __init__(self, error_message, error_detail: sys):
         super().__init__(error_message)
@@ -34,7 +32,6 @@ class CustomException(Exception):
         self.error_message = f"Error in {file_name} at line {exc_tb.tb_lineno}: {error_message}"
     def __str__(self): return self.error_message
 
-# --- 3. HELPER FUNCTIONS (for Transformation) ---
 def _load_df(maybe_df_or_path):
     if isinstance(maybe_df_or_path, pd.DataFrame):
         return maybe_df_or_path.copy()
@@ -53,7 +50,6 @@ def _get_target_column(df: pd.DataFrame):
     logger.warning("Standard target column name not found, falling back to the last column.")
     return df.columns[-1]
 
-# --- 4. COMPONENT 1: SPATIAL IMPUTATION ---
 from sklearn.impute import KNNImputer
 from dataclasses import dataclass
 
@@ -103,13 +99,12 @@ class SpatialImputer:
         except Exception as e:
             raise CustomException(e, sys)
 
-# --- 5. COMPONENT 2: TRANSFORMATION + SMOTE-NC ---
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import StandardScaler, OneHotEncoder, LabelEncoder
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from imblearn.over_sampling import SMOTENC 
-from imblearn.over_sampling import SMOTE # We need regular SMOTE too
+from imblearn.over_sampling import SMOTE 
 
 def build_preprocessing_pipeline(df: pd.DataFrame):
     try:
@@ -166,13 +161,11 @@ def initiate_data_transformation_smote(train_input, test_input, artifacts_dir="a
             X_train_resampled = X_train_df
             y_train_resampled = y_train_series
         else:
-            # --- !! FIX 1: Smarter Sampling Strategy !! ---
-            # Don't oversample to 11,851. Only boost classes under 1500 up to 1500.
+
             current_counts = y_train_series.value_counts().to_dict()
             sampling_strategy = {
                 key: max(count, 1500) for key, count in current_counts.items() if count < 1500
             }
-            # Add back the majority class (it won't be changed)
             for key, count in current_counts.items():
                 if key not in sampling_strategy:
                     sampling_strategy[key] = count
@@ -184,12 +177,11 @@ def initiate_data_transformation_smote(train_input, test_input, artifacts_dir="a
                 categorical_features=categorical_features_indices, 
                 random_state=42, 
                 k_neighbors=k_neighbors_smote,
-                sampling_strategy=sampling_strategy # Use the new strategy
+                sampling_strategy=sampling_strategy 
             ) 
             X_train_resampled, y_train_resampled = smote_nc.fit_resample(X_train_df, y_train_series)
             logger.info(f"SMOTE-NC finished. New training shape: {X_train_resampled.shape}")
             logger.info(f"New training class distribution:\n{pd.Series(y_train_resampled).value_counts().to_string()}")
-            # --- END OF FIX 1 ---
 
         logger.info("Applying preprocessing (imputer/encoder)...")
         X_train_processed = preprocessor.fit_transform(X_train_resampled)
@@ -215,7 +207,6 @@ def initiate_data_transformation_smote(train_input, test_input, artifacts_dir="a
     except Exception as e:
         raise CustomException(e, sys)
 
-# --- 6. COMPONENT 3: MODEL TRAINER (RandomForest) ---
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, f1_score, classification_report
 
@@ -241,7 +232,7 @@ def initiate_model_training(train_arr, test_arr, artifacts_dir="artifacts"):
                 label_encoder = pickle.load(f)
                 target_names = label_encoder.classes_
         report = classification_report(y_test, preds, target_names=target_names, zero_division=0)
-        model_path = os.path.join(artifacts_dir, "model_rf.pkl") # Save to new name
+        model_path = os.path.join(artifacts_dir, "model_rf.pkl") 
         with open(model_path, "wb") as f: pickle.dump(model, f)
         logger.info(f"[model_trainer_rf] model saved to: {model_path}")
         logger.info(f"[model_trainer_rf] Accuracy: {acc:.4f}, F1 (weighted): {f1_w:.4f}")
@@ -252,7 +243,6 @@ def initiate_model_training(train_arr, test_arr, artifacts_dir="artifacts"):
     except Exception as e:
         raise CustomException(e, sys)
 
-# --- 7. COMPONENT 4: GRAPH FEATURES (Stage C) ---
 import networkx as nx
 import torch
 import torch.nn.functional as F
@@ -367,7 +357,6 @@ class GraphFeatureGenerator:
         except Exception as e:
             raise CustomException(e, sys)
 
-# --- 8. NEW: COMPONENT 5: LSTM MODEL TRAINER (Stage D) ---
 import tensorflow as tf
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense, Dropout, BatchNormalization, Input
@@ -487,9 +476,7 @@ class LSTMModelTrainer:
                  X_train_aug_2d = X_train_2d
                  y_train_aug = y_train_seq
             else:
-                # --- !! FIX 2: Smarter Sampling Strategy (for Sequences) !! ---
                 current_counts = pd.Series(y_train_seq).value_counts().to_dict()
-                # Boost smallest classes to 1500, leave others as-is
                 sampling_strategy = {
                     key: max(count, 1500) for key, count in current_counts.items() if count < 1500
                 }
@@ -510,15 +497,13 @@ class LSTMModelTrainer:
             logger.info("Building LSTM model...")
             n_classes = len(self.label_encoder.classes_)
             
-            # --- !! FIX 3: Simpler Model to Prevent Overfitting !! ---
             model = Sequential()
-            model.add(Input(shape=(n_timesteps, n_features))) # Use Input layer
-            model.add(LSTM(units=64, return_sequences=False)) # Simpler: one LSTM layer
-            model.add(Dropout(0.5)) # Increased dropout
+            model.add(Input(shape=(n_timesteps, n_features))) 
+            model.add(LSTM(units=64, return_sequences=False)) 
+            model.add(Dropout(0.5)) 
             model.add(BatchNormalization())
             model.add(Dense(units=32, activation='relu'))
             model.add(Dense(units=n_classes, activation='softmax'))
-            # --- END OF FIX 3 ---
             
             model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
             model.summary(print_fn=lambda x: logger.info(x))
@@ -526,14 +511,14 @@ class LSTMModelTrainer:
             logger.info("Training LSTM model...")
             early_stopping = tf.keras.callbacks.EarlyStopping(
                 monitor='val_loss', 
-                patience=10, # Give it 10 epochs to improve
+                patience=10, 
                 restore_best_weights=True
             )
             
             model.fit(X_train_aug_3d, y_train_aug, 
                       epochs=50, 
                       batch_size=64, 
-                      validation_data=(X_test_seq, y_test_seq), # Use real test set for validation
+                      validation_data=(X_test_seq, y_test_seq), 
                       callbacks=[early_stopping],
                       verbose=1)
             
@@ -553,7 +538,6 @@ class LSTMModelTrainer:
         except Exception as e:
             raise CustomException(e, sys)
 
-# --- 9. MAIN PIPELINE ---
 if __name__ == "__main__":
     logger.info("Main SMOTE-NC training pipeline started")
     try:
@@ -562,10 +546,8 @@ if __name__ == "__main__":
         test_data_path = os.path.join(artifacts_dir, "test.csv")
         raw_data_path = os.path.join('artifacts', 'data.csv') 
 
-        # --- STEP 1: (Assume data exists) ---
         logger.info("STEP 1: Data Ingestion (Skipped, using existing artifacts)")
         
-        # --- STEP 2: Stage A - Spatial Imputation ---
         logger.info("STEP 2: Starting Stage A: Spatial Imputation")
         SHAPEFILE_DISTRICT_COL = 'NAME_2' 
         spatial_imputer_obj = SpatialImputer()
@@ -575,7 +557,6 @@ if __name__ == "__main__":
         )
         logger.info(f"Stage A complete. Full imputed feature set at {imputed_features_path}")
         
-        # --- STEP 3: Data Transformation & Augmentation (Stage B with SMOTE-NC) ---
         logger.info("STEP 3: Running Data Transformation (with SMOTE-NC augmentation)")
         train_arr_scaled_aug, test_arr_scaled, preprocessor_path, scaler_path = initiate_data_transformation_smote(
             train_input=train_data_path,
@@ -584,7 +565,6 @@ if __name__ == "__main__":
         )
         logger.info("Data Transformation and Augmentation complete.")
         
-        # --- STEP 4: Graph Feature Generation (Stage C) ---
         logger.info("STEP 4: Running Graph Feature Generation (Stage C)")
         gnn_obj = GraphFeatureGenerator(embedding_dim=64, epochs=50) 
         gnn_embedding_path = gnn_obj.initiate_graph_feature_generation(
@@ -592,7 +572,6 @@ if __name__ == "__main__":
         )
         logger.info(f"Stage C complete. GNN Embeddings saved to {gnn_embedding_path}")
 
-        # --- STEP 5: Model Trainer (RandomForest) ---
         logger.info("STEP 5: Running Model Trainer (on SMOTE data)")
         model_trainer_obj = initiate_model_training(
             train_arr=train_arr_scaled_aug, 
@@ -601,7 +580,6 @@ if __name__ == "__main__":
         )
         logger.info(f"Model Trainer (pre-GNN) complete. Accuracy: {model_trainer_obj['accuracy']:.4f}")
         
-        # --- STEP 6: Final Model Trainer (Stage D - LSTM) ---
         logger.info("STEP 6: Running Final Spatio-Temporal LSTM Model (Stage D)")
         lstm_trainer = LSTMModelTrainer()
         final_report = lstm_trainer.initiate_lstm_training()

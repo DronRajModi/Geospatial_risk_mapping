@@ -14,10 +14,7 @@ from src.exception import CustomException
 
 
 def _load_df(maybe_df_or_path):
-    """
-    Accepts either a pandas.DataFrame or a file path (CSV, parquet).
-    Returns a pandas.DataFrame.
-    """
+ 
     if isinstance(maybe_df_or_path, pd.DataFrame):
         return maybe_df_or_path.copy()
     if isinstance(maybe_df_or_path, str):
@@ -29,7 +26,7 @@ def _load_df(maybe_df_or_path):
         elif ext in [".parquet", ".pq"]:
             return pd.read_parquet(maybe_df_or_path)
         else:
-            # fallback
+         
             return pd.read_csv(maybe_df_or_path)
     raise CustomException(ValueError("Input must be a pandas DataFrame or a valid file path."), sys)
 
@@ -42,7 +39,7 @@ def _get_target_column(df: pd.DataFrame):
     for candidate in ["target", "label", "y"]:
         if candidate in df.columns:
             return candidate
-    # fallback to last column
+  
     return df.columns[-1]
 
 
@@ -93,15 +90,7 @@ def build_transformer(df: pd.DataFrame):
 
 
 def initiate_data_transformation(train_input, test_input, artifacts_dir="artifacts"):
-    """
-    Main entry for data transformation.
-
-    Accepts either DataFrames or file paths (CSV/parquet).
-    Returns: train_arr (np.ndarray), test_arr (np.ndarray), transformer (ColumnTransformer)
-    train_arr/test_arr shape: (n_samples, n_features + 1) where last column is target.
-
-    Also saves transformer and label encoder to artifacts.
-    """
+  
     try:
         os.makedirs(artifacts_dir, exist_ok=True)
 
@@ -114,10 +103,10 @@ def initiate_data_transformation(train_input, test_input, artifacts_dir="artifac
         if test_df.shape[0] == 0:
             raise ValueError("Test dataframe is empty.")
 
-        # Target column
+
         target_col = _get_target_column(train_df)
 
-        # Drop rows with missing target
+    
         train_missing = train_df[target_col].isna().sum()
         test_missing = test_df[target_col].isna().sum()
         if train_missing > 0 or test_missing > 0:
@@ -125,7 +114,7 @@ def initiate_data_transformation(train_input, test_input, artifacts_dir="artifac
             test_df = test_df.dropna(subset=[target_col])
             print(f"[data_transformation] Dropped {train_missing} rows from train, {test_missing} rows from test due to missing target '{target_col}'.")
 
-        # Build transformer on features only
+     
         combined_for_schema = pd.concat(
             [train_df.drop(columns=[target_col], errors="ignore"),
              test_df.drop(columns=[target_col], errors="ignore")],
@@ -134,7 +123,7 @@ def initiate_data_transformation(train_input, test_input, artifacts_dir="artifac
 
         transformer, numeric_cols, categorical_cols = build_transformer(combined_for_schema)
 
-        # Fit transformer
+      
         X_train_df = train_df.drop(columns=[target_col], errors="ignore")
         X_test_df = test_df.drop(columns=[target_col], errors="ignore")
 
@@ -142,7 +131,7 @@ def initiate_data_transformation(train_input, test_input, artifacts_dir="artifac
         X_train_arr = transformer.transform(X_train_df)
         X_test_arr = transformer.transform(X_test_df)
 
-        # Encode target
+       
         y_train = train_df[target_col].astype(str).values
         y_test = test_df[target_col].astype(str).values
 
@@ -153,17 +142,17 @@ def initiate_data_transformation(train_input, test_input, artifacts_dir="artifac
         y_train = y_train.reshape(-1, 1)
         y_test = y_test.reshape(-1, 1)
 
-        # Save label encoder
+       
         label_encoder_path = os.path.join(artifacts_dir, "label_encoder.pkl")
         with open(label_encoder_path, "wb") as f:
             pickle.dump(label_encoder, f)
         print(f"[data_transformation] Encoded target classes: {list(label_encoder.classes_)}")
 
-        # Concatenate features + target
+      
         train_arr = np.hstack([X_train_arr, y_train])
         test_arr = np.hstack([X_test_arr, y_test])
 
-        # Save transformer
+   
         transformer_path = os.path.join(artifacts_dir, "transformer.pkl")
         with open(transformer_path, "wb") as f:
             pickle.dump(transformer, f)

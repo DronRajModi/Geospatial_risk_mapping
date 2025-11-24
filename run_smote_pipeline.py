@@ -1,4 +1,3 @@
-# run_smote_pipeline.py
 
 import os
 import sys
@@ -10,7 +9,7 @@ import logging
 from datetime import datetime
 from sklearn.model_selection import train_test_split
 
-#  SETUP LOGGER   
+
 LOG_FILE = f"{datetime.now().strftime('%Y_%m_%d_%H_%M_%S')}.log"
 logs_path = os.path.join(os.getcwd(), "logs")
 os.makedirs(logs_path, exist_ok=True)
@@ -25,7 +24,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger("SMOTEPipelineLogger")
 
-#  DEFINE EXCEPTION 
+
 class CustomException(Exception):
     def __init__(self, error_message, error_detail: sys):
         super().__init__(error_message)
@@ -34,7 +33,7 @@ class CustomException(Exception):
         self.error_message = f"Error in {file_name} at line {exc_tb.tb_lineno}: {error_message}"
     def __str__(self): return self.error_message
 
-# HELPER FUNCTIONS 
+
 def _load_df(maybe_df_or_path):
     if isinstance(maybe_df_or_path, pd.DataFrame):
         return maybe_df_or_path.copy()
@@ -53,7 +52,7 @@ def _get_target_column(df: pd.DataFrame):
     logger.warning("Standard target column name not found, falling back to the last column.")
     return df.columns[-1]
 
-# SPATIAL IMPUTATION 
+
 from sklearn.impute import KNNImputer
 from dataclasses import dataclass
 
@@ -200,7 +199,7 @@ def initiate_data_transformation_smote(train_input, test_input, artifacts_dir="a
     except Exception as e:
         raise CustomException(e, sys)
 
-# MODEL TRAINER (RandomForest)
+
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, f1_score, classification_report
 
@@ -354,25 +353,22 @@ class GraphFeatureGenerator:
             raise CustomException(e, sys)
 
 def initiate_final_rf_training(
-    X_train_df, y_train_series, # Original training data
-    X_test_df, y_test_series,   # Original test data
-    gnn_embeddings_path,        # Path to GNN features
+    X_train_df, y_train_series,
+    X_test_df, y_test_series,  
+    gnn_embeddings_path,        
     artifacts_dir="artifacts"
 ):
     try:
         logger.info("Initiating FINAL Spatially-Aware RandomForest (Stage D)")
         
-        # 1. Load GNN embeddings
         df_gnn = pd.read_csv(gnn_embeddings_path)
         df_gnn['District'] = df_gnn['District'].str.strip().str.title()
         df_gnn = df_gnn.drop_duplicates(subset=['District'])
 
-        # 2. Merge GNN features into train and test dataframes
         logger.info("Merging GNN features into training and test sets...")
         X_train_spatial = pd.merge(X_train_df, df_gnn, on='District', how='left')
         X_test_spatial = pd.merge(X_test_df, df_gnn, on='District', how='left')
         
-        # Failsafe for length mismatch
         if len(X_train_spatial) != len(y_train_series):
             logger.warning("Length mismatch after merge. Aligning indices.")
             X_train_spatial = X_train_spatial.set_index('District').reindex(X_train_df['District']).reset_index()
@@ -389,7 +385,6 @@ def initiate_final_rf_training(
         
         logger.info(f"New training feature shape (with GNN): {X_train_spatial.shape}")
         
-        # 3. Apply SMOTE-NC 
         logger.info("Applying SMOTE-NC to the new spatio-temporal features...")
         
         preprocessor_gnn, _, _, categorical_features_indices_gnn = build_preprocessing_pipeline(X_train_spatial, include_gnn=True)
@@ -415,7 +410,6 @@ def initiate_final_rf_training(
         X_train_resampled, y_train_resampled = smote_nc.fit_resample(X_train_spatial, y_train_series)
         logger.info(f"SMOTE-NC finished. New training shape: {X_train_resampled.shape}")
 
-        # 4. Preprocess and Scale the new data
         logger.info("Applying preprocessing and scaling to new spatio-temporal data...")
         
         X_train_processed = preprocessor_gnn.fit_transform(X_train_resampled)
@@ -425,12 +419,10 @@ def initiate_final_rf_training(
         X_train_scaled = scaler.fit_transform(X_train_processed)
         X_test_scaled = scaler.transform(X_test_processed)
         
-        # 5. Encode Targets
         label_encoder = LabelEncoder()
         y_train_encoded = label_encoder.fit_transform(y_train_resampled)
         y_test_encoded = label_encoder.transform(y_test_series)
         
-        # 6. Train the Final Model
         logger.info("Training FINAL Spatially-Aware RandomForest (Stage D)")
         final_train_arr = np.hstack([X_train_scaled, y_train_encoded.reshape(-1, 1)])
         final_test_arr = np.hstack([X_test_scaled, y_test_encoded.reshape(-1, 1)])
@@ -454,7 +446,6 @@ def initiate_final_rf_training(
     except Exception as e:
         raise CustomException(e, sys)
 
-# --- 9. MAIN PIPELINE ---
 if __name__ == "__main__":
     logger.info("Main SMOTE-NC training pipeline started")
     try:
@@ -463,10 +454,8 @@ if __name__ == "__main__":
         test_data_path = os.path.join(artifacts_dir, "test.csv")
         raw_data_path = os.path.join('artifacts', 'data.csv') 
 
-        # --- STEP 1: (Assume data exists) ---
         logger.info("STEP 1: Data Ingestion (Skipped, using existing artifacts)")
         
-        # --- STEP 2: Stage A - Spatial Imputation ---
         logger.info("STEP 2: Starting Stage A: Spatial Imputation")
         SHAPEFILE_DISTRICT_COL = 'NAME_2' 
         spatial_imputer_obj = SpatialImputer()
@@ -476,7 +465,6 @@ if __name__ == "__main__":
         )
         logger.info(f"Stage A complete. Full imputed feature set at {imputed_features_path}")
         
-        # --- STEP 3: Data Transformation & Augmentation  ---
         logger.info("STEP 3: Running Data Transformation (with SMOTE-NC augmentation)")
         (
             train_arr_scaled_aug, test_arr_scaled, 
@@ -489,7 +477,6 @@ if __name__ == "__main__":
         )
         logger.info("Data Transformation and Augmentation complete.")
         
-        # --- STEP 4: Graph Feature Generation ---
         logger.info("STEP 4: Running Graph Feature Generation (Stage C)")
         gnn_obj = GraphFeatureGenerator(embedding_dim=64, epochs=50) 
         gnn_embedding_path = gnn_obj.initiate_graph_feature_generation(
@@ -497,7 +484,6 @@ if __name__ == "__main__":
         )
         logger.info(f"Stage C complete. GNN Embeddings saved to {gnn_embedding_path}")
 
-        # --- STEP 5: Model Trainer (Baseline RandomForest) ---
         logger.info("STEP 5: Running Baseline Model Trainer (on SMOTE data, NO GNN)")
         model_trainer_obj = initiate_model_training(
             train_arr=train_arr_scaled_aug, 
@@ -507,7 +493,6 @@ if __name__ == "__main__":
         )
         logger.info(f"Baseline Model Trainer complete. Accuracy: {model_trainer_obj['accuracy']:.4f}")
         
-        # --- STEP 6: Final Model Trainer  ---
         logger.info("STEP 6: Running Final Spatially-Aware RandomForest Model (Stage D)")
         final_model_results = initiate_final_rf_training(
             X_train_df=X_train_df, y_train_series=y_train_series,

@@ -21,7 +21,7 @@ export default function SidebarForm({
 }) {
   return (
     <div className="flex flex-col h-full">
-      <div className="flex-grow overflow-y-auto pr-2">
+      <div className="flex grow overflow-y-auto pr-2">
         
      
         {mode === 'heatmap' && (
@@ -118,7 +118,7 @@ function PopulationRiskForm({ onSubmit, isLoading, onZoom, heatmapData }) {
         </form>
       </div>
 
-      {/* Zoom Controls inside Population Risk */}
+    
       <div className="border-t pt-4">
         <h3 className="text-lg font-medium text-gray-700 mb-2">Explore Region</h3>
         <div className="space-y-3">
@@ -133,7 +133,7 @@ function PopulationRiskForm({ onSubmit, isLoading, onZoom, heatmapData }) {
         </div>
       </div>
 
-      {/* Display Specific Risk Score */}
+    
       {selectedDistrict && (
         <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
           <p className="text-sm text-gray-600">Average Risk for</p>
@@ -148,11 +148,11 @@ function PopulationRiskForm({ onSubmit, isLoading, onZoom, heatmapData }) {
   );
 }
 
-// --- COMPONENT 2: GNN NEIGHBOR ANALYSIS FORM ---
+
 function NeighborAnalysisForm({ onNeighborAnalysis, isLoading, onZoom }) {
   const [selectedState, setSelectedState] = useState("");
   const [selectedDistrict, setSelectedDistrict] = useState("");
-  // const [disease, setDisease] = useState('CVD'); // Context for popup
+  // const [disease, setDisease] = useState('CVD'); 
 
   const stateNames = Object.keys(stateCoords); 
   const districtNames = (selectedState && indiaData[selectedState]) ? indiaData[selectedState] : [];
@@ -182,9 +182,6 @@ function NeighborAnalysisForm({ onNeighborAnalysis, isLoading, onZoom }) {
         Find districts that are "structurally similar" (Socio-Economic Twins) to the selected district using Graph Neural Networks.
       </p>
       
-      {/* Context Selector */}
-     
-
       <div className="space-y-3">
         <select value={selectedState} onChange={handleStateChange} className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-white text-black">
           <option value="">Select State</option>
@@ -203,7 +200,7 @@ function NeighborAnalysisForm({ onNeighborAnalysis, isLoading, onZoom }) {
   );
 }
 
-// Sub-component for the Personal Prediction Form 
+
 function PersonalForm({ onSubmit, isLoading }) {
   const [formData, setFormData] = useState({
     state: "", District: "", Age: "", Gender: "",
@@ -245,7 +242,7 @@ function PersonalForm({ onSubmit, isLoading }) {
         Check Your Personal Risk
       </h2>
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* All form fields... */}
+ 
         <div><label className="block text-gray-600 font-medium mb-1">State</label><select name="state" value={formData.state} onChange={handleChange} className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"><option value="">Select State</option>{stateNames.map((state) => ( <option key={state} value={state}>{state}</option> ))}</select></div>
         <div><label className="block text-gray-600 font-medium mb-1">District</label><select name="District" value={formData.District} onChange={handleChange} className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500" disabled={!formData.state}><option value="">Select District</option>{stateDistricts.map((dist) => ( <option key={dist} value={dist}>{dist}</option> ))}</select></div>
         <div><label className="block text-gray-600 font-medium mb-1">Age</label><input type="number" name="Age" value={formData.Age} onChange={handleChange} className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter age (e.g., 55)" min="18" max="100" /></div>
